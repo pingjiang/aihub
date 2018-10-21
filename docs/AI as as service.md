@@ -2,6 +2,8 @@
 
 在AI测试平台项目中需要一些AI能力来辅助数据标注，因为网络安全等因素无法使用公司外商业公司提供的AI服务，公司自研的AI服务需要还不完善，很多能力都没有。所以尝试使用开源的AI框架和训练好的模型，封装为服务后使用。
 
+## 功能分析
+
 将AI模型封装为服务的基本要求：
 
 1. 实现人脸关键点检测，包括5个和68个点；
@@ -17,14 +19,20 @@
 
 ## 技术架构选型
 
-* 选择python作为主要的开发语言。因为大多数的AI模型都是使用python开发，而且python属于动态语言，比较灵活，就我个人而言，擅长JavaScript开发，对于python也能够快速上手；
+在开源社区搜索了一番，比较接近我需要实现的功能是tensorflow serving，mxnet-model-server，deepdetect和clipper等。但是因为tensorflow serving只是用于tensorflow框架，mxnet-model-server只是用于mxnet；deepdetect仅仅支持caffe和dlib等；clipper虽然是一个通用的模型部署方案，但是clipper需要自己编写输入输出和模型处理相关的代码。
+
+这里关键需要支持的是支持不同框架训练出来的模型能够部署为服务后供业务使用，现有的开源方案都不满足，所以这里选择自己实现一整套方案。
+
+* 选择python作为主要的开发语言，使用Flask框架开发接口。因为大多数的AI模型都是使用python开发，而且python属于动态语言，比较灵活，就我个人而言，擅长JavaScript开发，对于python也能够快速上手；
 * 选择Docker部署服务，解决不同模型的环境依赖；
 
 ## 服务的系统设计
 
+![aihub](./aihub.png)
+
 ### aihub_gateway
 
-接口网关，可以注册多个服务，每个服务使用轮询的方式实现负载均衡；
+接口网关，可以注册多个服务，每个服务使用轮询的方式实现负载均衡，目前暂时使用nginx，后续如果要实现自动注册的话，就需要实现一个专门的服务了。
 
 ### aihub_serve
 
@@ -101,6 +109,22 @@ class Service:
 1. services/xxx是一个标准的python的库，使用requirements.txt管理依赖，setup.py实现自动构建和部署。只有部署到系统中后才可以被aihub_serve动态加载运行。
 2. 一般services/xxx下面是xxx/{__init__.py, service.py}文件；
 
+## 使用aihub服务
+
+```sh
+docker run -d -p 5001:80 aihub_face_alignment
+docker run -d -p 5002:80 aihub_mask_rcnn
+docker run -d -p 5003:80 aihub_matting
+```
+
+在nginx中配置5001，5002，5003等端口的代理即可实现统一的接口。
+
+使用postman测试接口：
+
+
+![aihub](./aihub_postman.png)
+
+
 ## 开源模型
 
 ### 人脸检测
@@ -110,3 +134,11 @@ class Service:
 目前主流的AI框架有Tensorflow, Torch, Caffe等不同框架下面训练出来的模型的使用方法都不一样，有些相同的框架下训练出来的模型，也因为缺乏统一的接口等，使用起来也是不一样的。而且不同的框架运行环境都有很多的依赖和要求，如果使用传统的方式实现，是无法实现自动化按需部署的。
 
 为了便于快速开发一个新的服务，这里做了一系列的约定和统一的封装。
+
+## 参考资料
+
+* https://medium.com/@vikati/the-rise-of-the-model-servers-9395522b6c58
+* https://conferences.oreilly.com/strata/strata-ny-2018/public/schedule/detail/69861
+* https://hackernoon.com/a-guide-to-scaling-machine-learning-models-in-production-aa8831163846
+* https://shuaiw.github.io/2018/01/21/serve-ml-model-with-clipper.html
+
