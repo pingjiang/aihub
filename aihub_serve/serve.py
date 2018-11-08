@@ -11,6 +11,7 @@ from flask import jsonify
 from jpot import transform
 import base64
 from urllib.parse import urlencode
+from urllib.request import urlretrieve
 
 def write_file(filepath, content):
   with open(filepath, 'wb') as f:
@@ -28,6 +29,9 @@ def save_base64_image(filepath, base64_string):
   print('save image file length', filepath, len(imgdata))
   write_file(filepath, bytearray(imgdata))
 
+def save_url(filepath, url):
+	urlretrieve(url, filepath)
+
 def uniq_file():
   return './__autosaved_' + str(uuid4()) + '.png'
 
@@ -36,14 +40,25 @@ def read_file_as_base64(filepath):
     return base64.b64encode(f.read())
 
 def save_files(data, request):
+	cleans = []
 	for key in request.json.keys():
-		if 'image_base64' in key:
+		if key == 'url':
+			url = request.json.get(key)
+
+			if url is not None:
+				tmp_filepath = uniq_file()
+				save_url(tmp_filepath, url)
+				data[key] = tmp_filepath
+				cleans.append(tmp_filepath)
+		elif 'image_base64' in key:
 			image_base64 = request.json.get(key)
 
 			if image_base64 is not None:
 				tmp_filepath = uniq_file()
 				save_base64_image(tmp_filepath, image_base64)
 				data[key] = tmp_filepath
+				cleans.append(tmp_filepath)
+	return cleans
 
 @contextmanager
 def timeit_context(name):
@@ -115,11 +130,13 @@ def handle_api(name):
 			'msg': 'load service error: ' + str(err),
 		})
 
+	cleans = None
+
 	try:
 		s = services[key]
 		# request .json, .args, .forms, .files
 		data = request.json if request.json is not None else {} # { 'img_path': '../assets/aflw-test.jpg' }
-		save_files(data, request)
+		cleans = save_files(data, request)
 
 		startTime = time.time()
 		
@@ -143,6 +160,10 @@ def handle_api(name):
 			'code' : 400,
 			'msg': 'invoke handler error: ' + str(err),
 		})
+	finally:
+		if cleans is not None and len(cleans) > 0:
+			for f in cleans:
+				os.remove(f)
 
 if __name__ == '__main__':
 	application.run(debug = True, host = '0.0.0.0')

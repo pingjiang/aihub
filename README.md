@@ -12,3 +12,21 @@ OSS AI models hub
   - 如何封装一个独立的service文件，可以动态加载这个service文件，这样就不用重复开发了？
   - 如何调试dockerfile？
   
+
+## fileinfo
+
+启动服务：
+
+```sh
+docker run -it -p 5000:80 -v $(pwd)/userscripts:/userscripts aihub_fileinfo
+```
+
+测试请求：
+
+```json
+{
+	"transformer": {"property":{"format":"$.format", "width": "$.width", "height": "$.height"}, "data": "$.data.entry"},
+	"entry": "image_info",
+	"url": "http://192.168.0.103:8080/assets/aflw-test.jpg"
+}
+```
