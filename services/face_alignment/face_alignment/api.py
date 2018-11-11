@@ -198,14 +198,17 @@ class FaceAlignment:
 				pts_img = torch.cat(
 					(pts_img, depth_pred * (1.0 / (256.0 / (200.0 * scale)))), 1)
 
+			faces = pts_img.numpy().tolist()
+			# print('got faces {}', faces)
+
 			landmarks.append({
 				'location': {
-					'x': d[0],
-					'y': d[1],
-					'width': d[2] - d[0],
-					'height': d[3] - d[1]
+					'x': int(d[0]),
+					'y': int(d[1]),
+					'width': int(d[2] - d[0]),
+					'height': int(d[3] - d[1])
 				},
-				'faces': pts_img.numpy().tolist()
+				'faces': faces
 			})
 
 		return landmarks

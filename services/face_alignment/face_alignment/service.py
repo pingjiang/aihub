@@ -11,10 +11,13 @@ class Service:
 		self.handler = face_alignment.FaceAlignment(face_alignment.LandmarksType._2D, device='cpu', face_detector=face_detector, base_path = base_path, config = config)
 
 	def handle(self, data, request = None):
-		image_base64 = data.get('image_base64')
+		url = data.get('url')
 
-		if image_base64 is None:
-			raise TypeError('image_base64 is null')
+		if url is None:
+			url = data.get('image_base64')
+
+		if url is None:
+			raise TypeError('url and image_base64 is null')
 
 		use_dlib = get_config(data, 'use_dlib', False)
-		return self.handler.get_landmarks_from_image(image_base64, use_dlib)
+		return self.handler.get_landmarks_from_image(url, use_dlib)
